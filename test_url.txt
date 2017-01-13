@@ -1,0 +1,20 @@
+[50k]
+spdy = https://www.helloworlds.cc/index.html
+http = http://www.helloworlds.cc/index.html
+
+#[20k]
+#spdy = https://m1-op-new-big-bfe0.m1.baidu.com:8905/test/st20.html
+#http = http://m1-op-new-big-bfe0.m1.baidu.com:8800/test/st20.html
+
+#[100k]
+#spdy = https://m1-op-new-big-bfe0.m1.baidu.com:8905/test/st100.html
+#http = http://m1-op-new-big-bfe0.m1.baidu.com:8800/test/st100.html
+
+#[5k]
+#spdy = https://m1-op-new-big-bfe0.m1.baidu.com:8905/test/st5.html
+#http = http://m1-op-new-big-bfe0.m1.baidu.com:8800/test/st5.html
+
+#[30k]
+#spdy = https://m1-op-new-big-bfe0.m1.baidu.com:8905/test/st30.html
+#http = http://m1-op-new-big-bfe0.m1.baidu.com:8800/test/st30.html
+
