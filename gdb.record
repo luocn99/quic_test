@@ -1,0 +1,39 @@
+#0  0x00007ffff74e4924 in (anonymous namespace)::QuicCryptoServerStream::OnHandshakeMessage((anonymous namespace)::CryptoHandshakeMessage const&) (this=0x7ffff18f3420, message=...)
+    at ../../net/quic/core/quic_crypto_server_stream.cc:132
+#1  0x00007ffff745288d in (anonymous namespace)::CryptoFramer::Process((anonymous namespace)::StringPiece) (this=0x7ffff18f3608, input=...) at ../../net/quic/core/crypto/crypto_framer.cc:266
+#2  0x00007ffff7452000 in (anonymous namespace)::CryptoFramer::ProcessInput((anonymous namespace)::StringPiece) (this=0x7ffff18f3608, input=...) at ../../net/quic/core/crypto/crypto_framer.cc:72
+#3  0x00007ffff74e8e05 in (anonymous namespace)::QuicCryptoStream::OnDataAvailable() (this=0x7ffff18f3420)
+	    at ../../net/quic/core/quic_crypto_stream.cc:69
+#4  0x00007ffff755b141 in (anonymous namespace)::QuicStreamSequencer::OnStreamFrame((anonymous namespace)::QuicStreamFrame const&) (this=0x7ffff18f3460, frame=...) at ../../net/quic/core/quic_stream_sequencer.cc:85
+#5  0x00007ffff7557f01 in (anonymous namespace)::QuicStream::OnStreamFrame((anonymous namespace)::QuicStreamFrame const&) (this=0x7ffff18f3420, frame=...) at ../../net/quic/core/quic_stream.cc:121
+#6  0x00007ffff753a64d in (anonymous namespace)::QuicSession::OnStreamFrame((anonymous namespace)::QuicStreamFrame const&) (this=0x2881d8711420, frame=...) at ../../net/quic/core/quic_session.cc:84
+#7  0x000000000045d499 in (anonymous namespace)::QuicSimpleServerSession::OnStreamFrame((anonymous namespace)::QuicStreamFrame const&) (this=0x2881d8711420, frame=...)
+		    at ../../net/tools/quic/quic_simple_server_session.cc:67
+#8  0x00007ffff74cb7b3 in (anonymous namespace)::QuicConnection::OnStreamFrame((anonymous namespace)::QuicStreamFrame const&) (this=0x7ffff18c6020, frame=...) at ../../net/quic/core/quic_connection.cc:688
+#9  0x00007ffff74f85da in (anonymous namespace)::QuicFramer::ProcessFrameData((anonymous namespace)::QuicDataReader*, (anonymous namespace)::QuicPacketHeader const&) (this=0x7ffff18c6040, reader=0x7fffffff68c8, header=...) at ../../net/quic/core/quic_framer.cc:1041
+#10 0x00007ffff74f7638 in (anonymous namespace)::QuicFramer::ProcessDataPacket((anonymous namespace)::QuicDataReader*, (anonymous namespace)::QuicPacketPublicHeader const&, (anonymous namespace)::QuicEncryptedPacket const&, char*, size_t) (this=0x7ffff18c6040, encrypted_reader=0x7fffffff7438, public_header=..., packet=..., decrypted_buffer=0x7fffffff7600 "@\001\017\021\001\001", buffer_length=1452)
+			    at ../../net/quic/core/quic_framer.cc:607
+#11 0x00007ffff74f67a6 in (anonymous namespace)::QuicFramer::ProcessPacket((anonymous namespace)::QuicEncryp---Type <return> to continue, or q <return> to quit---
+			tedPacket const&) (this=0x7ffff18c6040, packet=...) at ../../net/quic/core/quic_framer.cc:537
+#12 0x00007ffff74d0093 in (anonymous namespace)::QuicConnection::ProcessUdpPacket((anonymous namespace)::QuicSocketAddress const&, (anonymous namespace)::QuicSocketAddress const&, (anonymous namespace)::QuicReceivedPacket const&) (this=0x7ffff18c6020, self_address=..., peer_address=..., packet=...)
+    at ../../net/quic/core/quic_connection.cc:1262
+#13 0x00007ffff753c3f1 in (anonymous namespace)::QuicSession::ProcessUdpPacket((anonymous namespace)::QuicSocketAddress const&, (anonymous namespace)::QuicSocketAddress const&, (anonymous namespace)::QuicReceivedPacket const&) (this=0x2881d8711420, self_address=..., peer_address=..., packet=...)
+	    at ../../net/quic/core/quic_session.cc:277
+#14 0x0000000000430e87 in (anonymous namespace)::QuicDispatcher::OnUnauthenticatedPublicHeader((anonymous namespace)::QuicPacketPublicHeader const&) (this=0x2881d86c3320, header=...)
+		    at ../../net/tools/quic/quic_dispatcher.cc:269
+#15 0x00007ffff74f660a in (anonymous namespace)::QuicFramer::ProcessPacket((anonymous namespace)::QuicEncryptedPacket const&) (this=0x2881d86c3778, packet=...) at ../../net/quic/core/quic_framer.cc:513
+
+#16 0x0000000000430bea in (anonymous namespace)::QuicDispatcher::ProcessPacket((anonymous namespace)::QuicSocketAddress const&, (anonymous namespace)::QuicSocketAddress const&, (anonymous namespace)::QuicReceivedPacket const&) (this=0x2881d86c3320, server_address=..., client_address=..., packet=...)
+			    at ../../net/tools/quic/quic_dispatcher.cc:239
+#17 0x0000000000421c95 in (anonymous namespace)::QuicPacketReader::ReadAndDispatchSinglePacket(int, int, (anonymous namespace)::QuicClock const&, (anonymous namespace)::ProcessPacketInterface*, (anonymous namespace)::QuicPacketCount*) (fd=14, port=6121, clock=..., processor=0x2881d86c3328, packets_dropped=0x7fffffffc8e8)
+				    at ../../net/tools/quic/quic_packet_reader.cc:188
+#18 0x00000000004219f5 in (anonymous namespace)::QuicPacketReader::ReadAndDispatchPackets(int, int, (anonymous namespace)::QuicClock const&, (anonymous namespace)::ProcessPacketInterface*, (anonymous namespace)::QuicPacketCount*) (this=0x7ffff18538a0, fd=14, port=6121, clock=..., processor=0x2881d86c3328, packets_dropped=0x7fffffffc8e8) at ../../net/tools/quic/quic_packet_reader.cc:72
+#19 0x00000000004233af in (anonymous namespace)::QuicServer::OnEvent(int, (anonymous namespace)::EpollEvent*) (this=0x7fffffffbb18, fd=14, event=0x7fffffffa5d0) at ../../net/tools/quic/quic_server.cc:183
+#20 0x0000000000477dee in (anonymous namespace)::EpollServer::CallReadyListCallbacks() (this=0x7fffffffbb28)---Type <return> to continue, or q <return> to quit---
+					 at ../../net/tools/epoll_server/epoll_server.cc:701
+#21 0x0000000000477b14 in (anonymous namespace)::EpollServer::WaitForEventsAndCallHandleEvents(int64_t, epoll_event*, int) (this=0x7fffffffbb28, timeout_in_us=50000, events=0x7fffffffbcc4, events_size=256)
+					     at ../../net/tools/epoll_server/epoll_server.cc:671
+#22 0x000000000047548f in (anonymous namespace)::EpollServer::WaitForEventsAndExecuteCallbacks() (this=0x7fffffffbb28) at ../../net/tools/epoll_server/epoll_server.cc:389
+#23 0x0000000000423019 in (anonymous namespace)::QuicServer::WaitForEvents() (this=0x7fffffffbb18)
+						     at ../../net/tools/quic/quic_server.cc:158
+#24 0x00000000004129e7 in main () at ../../net/tools/quic/quic_server_bin.cc:96

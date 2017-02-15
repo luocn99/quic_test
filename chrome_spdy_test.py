@@ -57,6 +57,7 @@ def start_chrome():
     """
     start chrome in debugging mode
     """
+    #you can add  "--ignore-certificate-errors" to avoid certificate error
     Popen("%s --ignore-certificate-errors --remote-debugging-port=9222" % chrome_path)
     time.sleep(3)
 

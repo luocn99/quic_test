@@ -1,0 +1,22 @@
+digraph main {
+    "QuicSimpleServer::Listen"->"socket->Listen";
+    "socket->Listen"->"socket->SetReceiveBufferSize";
+    "socket->SetReceiveBufferSize"->"dispatcher_.reset";
+    "dispatcher_.reset"->"new QuicSimpleServerPacketWriter";
+    "new QuicSimpleServerPacketWriter"->"dispatcher_->InitializeWithWriter(writer)";
+    "dispatcher_->InitializeWithWriter(writer)"->"StartReading()";
+    "StartReading()"->"socket_->RecvFrom";
+    "socket_->RecvFrom"->"OnReadComplete";
+    "OnReadComplete"->"dispatcher_->ProcessPacket";
+    "dispatcher_->ProcessPacket"->"StartReading()";
+
+subgraph cluster1{
+	"dispatcher_->ProcessPacket"->"framer_.ProcessPacket(packet)";
+	"framer_.ProcessPacket(packet)"->"QuicFramer::ProcessPacket";
+}
+subgraph cluster2{
+	"QuicFramer::ProcessPacket"->"visitor_->OnPacket()";
+	"visitor_->OnPacket()"->"QuicConnection::OnPacket";
+}
+
+}

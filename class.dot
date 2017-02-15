@@ -1,0 +1,14 @@
+digraph G {
+	"public QuicTimeWaitListManager::Visitor"->"QuicDispatcher";
+	"public ProcessPacketInterface"->"QuicDispatcher";
+	"public QuicBlockedWriterInterface"->"QuicDispatcher";
+	"public QuicFramerVisitorInterface"->"QuicDispatcher";
+	"public QuicBufferedPacketStore::VisitorInterface"->"QuicDispatcher";
+
+subgraph Connection {
+	"public QuicFramerVisitorInterface"->"QuicConnection";
+	"public QuicBlockedWriterInterface"->"QuicConnection";
+	"public QuicPacketGenerator::DelegateInterface"->"QuicConnection";
+	"public QuicSentPacketManagerInterface::NetworkChangeVisitor"->"QuicConnection";
+}
+}

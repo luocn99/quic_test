@@ -1,0 +1,131 @@
+digraph handshake {
+	label="ProcessPacket";
+	"QuicFramer::ProcessPacket"->"ProcessPublicHeader(&reader, &public_header)";
+	"ProcessPublicHeader(&reader, &public_header)"->"visitor_->OnUnauthenticatedPublicHeader(public_header)";
+	"visitor_->OnUnauthenticatedPublicHeader(public_header)" -> "QuicDispatcher::OnUnauthenticatedPublicHeader";
+	"visitor_->OnUnauthenticatedPublicHeader(public_header)"->"ProcessDataPacket";
+/*QuicFramer::ProcessDataPacket
+ProcessUnauthenticatedHeader
+visitor_->OnUnauthenticatedHeader
+QuicDispatcher::OnUnauthenticatedHeader
+MaybeRejectStatelessly(connection_id, header)
+ChloExtractor::Extract
+ProcessStatelessRejectorState
+*/
+subgraph ProcessDataPacket {
+	label = "ProcessDataPacket";
+	"ProcessDataPacket"->"ProcessUnauthenticatedHeader";
+	"ProcessUnauthenticatedHeader" ->"DecryptPayload"[label="true"];
+	"ProcessUnauthenticatedHeader" ->"ProcessDataPacket"[label="false"];
+	"DecryptPayload"->"visitor_->OnPacketHeader(header)";
+	"visitor_->OnPacketHeader(header)"->"ProcessFrameData";
+	"ProcessFrameData"->"visitor_->OnPacketComplete()";
+}
+subgraph ProcessFrameData {
+	label="ProcessFrameData";
+	"ProcessFrameData"->"ProcessStreamFrame"[label="frame_type & kQuicFrameTypeStreamMask"];
+	"ProcessStreamFrame"->"visitor_->OnStreamFrame(frame)";
+	"visitor_->OnStreamFrame(frame)"->"ChloFramerVisitor::OnStreamFrame";
+}
+subgraph ChloFramerVisitorOnStreamFrame {
+	label="ChloFramerVisitor::OnStreamFrame";
+	"ChloFramerVisitor::OnStreamFrame"->"frame.stream_id == kCryptoStreamId";
+	"frame.stream_id == kCryptoStreamId"->"crypto_framer.set_visitor(this)"
+	"crypto_framer.set_visitor(this)"->"crypto_framer.ProcessInput(data)";
+}
+
+subgraph crypto_framerProcessInput{
+	label="crypto_framer.ProcessInput(data)";
+	"crypto_framer.ProcessInput(data)"->"Process(input)";
+	"Process(input)"->"visitor_->OnHandshakeMessage";
+	"visitor_->OnHandshakeMessage"->"ChloFramerVisitor::OnHandshakeMessage";
+}
+subgraph ChloFramerVisitorOnHandshakeMessage {
+	label = "ChloFramerVisitor::OnHandshakeMessage";
+	"ChloFramerVisitor::OnHandshakeMessage"->"delegate_->OnChlo(framer_->version(), connection_id_, message)";
+	"delegate_->OnChlo(framer_->version(), connection_id_, message)"->"ChloExtractor::Delegate::OnChlo";
+}
+subgraph ChloExtractorDelegateOnChlo {
+	label = "ChloExtractor::Delegate::OnChlo";
+	"ChloExtractor::Delegate::OnChlo"->"rejector_->OnChlo";
+}
+subgraph OnUnauthenticatedPublicHeader {
+	label="OnUnauthenticatedPublicHeader";
+	"QuicDispatcher::OnUnauthenticatedPublicHeader"->"essionMap::iterator it = session_map_.find(connection_id)";
+	"essionMap::iterator it = session_map_.find(connection_id)"->"it->second->ProcessUdpPacket";
+	"it->second->ProcessUdpPacket"->"QuicConnection::ProcessUdpPacket";
+	"QuicConnection::ProcessUdpPacket"->"framer_.ProcessPacket(packet)";
+	"framer_.ProcessPacket(packet)"->"MaybeProcessUndecryptablePackets()";
+	"MaybeProcessUndecryptablePackets()"->"MaybeSendInResponseToPacket()";
+	"MaybeSendInResponseToPacket()"->"SetPingAlarm()";
+}
+
+subgraph ProcessUnauthenticatedHeader {
+	label="ProcessUnauthenticatedHeader";
+	"ProcessUnauthenticatedHeader"->"visitor_->OnUnauthenticatedHeader(*header)";
+	"visitor_->OnUnauthenticatedHeader(*header)"->"QuicDispatcher::OnUnauthenticatedHeader";
+}
+subgraph DispatcherOnUnauthenticatedHeader{
+	label="QuicDispatcher::OnUnauthenticatedHeader";
+	"QuicDispatcher::OnUnauthenticatedHeader"->"ValidityChecks(header)";
+	"ValidityChecks(header)"->"MaybeRejectStatelessly"[label="fate == kFateProcess"];
+	"ValidityChecks(header)"->"ProcessUnauthenticatedHeaderFate";
+}
+subgraph MaybeRejectStatelessly {
+	label="MaybeRejectStatelessly";
+	"MaybeRejectStatelessly"->"ChloExtractor::Extract";
+	"ChloExtractor::Extract"->"ProcessStatelessRejectorState";
+}
+
+subgraph ProcessStatelessRejectorState {
+	label = "ProcessStatelessRejectorState";
+	"ProcessStatelessRejectorState"->"ProcessUnauthenticatedHeaderFate";
+
+}
+
+subgraph ProcessUnauthenticatedHeaderFate {
+	label = "ProcessUnauthenticatedHeaderFate";
+	"ProcessUnauthenticatedHeaderFate"->"ProcessChlo()";
+}
+
+subgraph ProcessChlo {
+	label = "ProcessChlo";
+	"ProcessChlo()"->"CreateQuicSession"; 
+	"CreateQuicSession"->"session->ProcessUdpPacket";
+}
+subgraph sessionProcessUdpPacket {
+	label = "session->ProcessUdpPacket";
+	"session->ProcessUdpPacket"->"QuicConnection::ProcessUdpPacket";
+	"QuicConnection::ProcessUdpPacket"->"framer_.ProcessPacket";
+	"framer.ProcessPacket"->"QuicFramer::ProcessPacket";
+	"framer.ProcessPacket"->"MaybeProcessUndecryptablePackets()";
+	"MaybeProcessUndecryptablePackets()"->"MaybeSendInResponseToPacket()";
+	"MaybeSendInResponseToPacket()"->"SetPingAlarm()";
+}
+subgraph CreateQuicSession {
+	label = "CreateQuicSession";
+	"CreateQuicSession"->"new QuicConnection";
+	"new QuicConnection"->"new QuicSimpleServerSession";
+	"new QuicSimpleServerSession"->"session->Initialize()";
+	"session->Initialize()"->"QuicServerSessionBase::Initialize()";
+}
+
+subgraph sessionInitialize {
+	label = "session->Initialize()";
+	"QuicServerSessionBase::Initialize()"->"QuicSpdySession::Initialize()";
+}
+
+subgraph "QuicSpdySessionInitialize" {
+	label = "QuicSpdySession::Initialize";
+	"QuicSpdySession::Initialize()"->"headers_stream_.reset(new QuicHeadersStream(this))";
+}
+
+
+subgraph ChloExtractorExtract {
+	"ChloExtractor::Extract"->"QuicFramer framer(versions, QuicTime::Zero(), Perspective::IS_SERVER)";
+	"QuicFramer framer(versions, QuicTime::Zero(), Perspective::IS_SERVER)"->"ChloFramerVisitor visitor";
+	"ChloFramerVisitor visitor"->"framer.set_visitor(&visitor)";
+	"framer.set_visitor(&visitor)"->"framer.ProcessPacket(packet)";
+	"framer.ProcessPacket(packet)"->"QuicFramer::ProcessPacket";
+}
+}

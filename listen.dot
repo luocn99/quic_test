@@ -1,0 +1,21 @@
+digraph G {
+	"net::QuicSimpleServer server"-> "QuicSimpleServer::Listen";
+	"QuicSimpleServer::Listen"->"UDPServerSocket:Listen";
+	"UDPServerSocket:Listen"->"socket_.Open";
+	"socket_.Open"->"socket_.Bind(address)";
+	"socket_"->"typedef UDPSocketPosix UDPSocket";
+#"UDPSocket:Listen"->"UDPSocketPosix:Listen"
+}
+
+digraph main {
+	"QuicSimpleServer::Listen"->"socket->Listen";
+	"socket->Listen"->"socket->SetReceiveBufferSize";
+	"socket->SetReceiveBufferSize"->"dispatcher_.reset";
+	"dispatcher_.reset"->"new QuicSimpleServerPacketWriter";
+	"new QuicSimpleServerPacketWriter"->"dispatcher_->InitializeWithWriter(writer)";
+	"dispatcher_->InitializeWithWriter(writer)"->"StartReading()";
+	"StartReading()"->"socket_->RecvFrom";
+	"socket_->RecvFrom"->"OnReadComplete";
+	"OnReadComplete"->"dispatcher_->ProcessPacket";
+	"dispatcher_->ProcessPacket"->"StartReading()";
+}
