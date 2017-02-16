@@ -1,25 +1,21 @@
 digraph handshake {
 	label="ProcessPacket";
-	"QuicFramer::ProcessPacket"->"ProcessPublicHeader(&reader, &public_header)";
-	"ProcessPublicHeader(&reader, &public_header)"->"visitor_->OnUnauthenticatedPublicHeader(public_header)";
-	"visitor_->OnUnauthenticatedPublicHeader(public_header)" -> "QuicDispatcher::OnUnauthenticatedPublicHeader";
-	"visitor_->OnUnauthenticatedPublicHeader(public_header)"->"ProcessDataPacket";
-/*QuicFramer::ProcessDataPacket
-ProcessUnauthenticatedHeader
-visitor_->OnUnauthenticatedHeader
-QuicDispatcher::OnUnauthenticatedHeader
-MaybeRejectStatelessly(connection_id, header)
-ChloExtractor::Extract
-ProcessStatelessRejectorState
-*/
+	"QuicFramer::ProcessPacket"->"visitor_->OnPacket()";
+	"visitor_->OnPacket()"->"ProcessPublicHeader";
+	"ProcessPublicHeader"->"visitor_->OnUnauthenticatedPublicHeader";
+	"visitor_->OnUnauthenticatedPublicHeader" -> "QuicDispatcher::OnUnauthenticatedPublicHeader"[label="visitor_=QuicDispatcher", style=dashed];
+	"visitor_->OnUnauthenticatedPublicHeader"->"ProcessDataPacket";
+	"ProcessDataPacket"->"QuicFramer::ProcessPacket"[label=rv];
 subgraph ProcessDataPacket {
 	label = "ProcessDataPacket";
-	"ProcessDataPacket"->"ProcessUnauthenticatedHeader";
+	"ProcessDataPacket"->"ProcessUnauthenticatedHeader"[style=dashed];
 	"ProcessUnauthenticatedHeader" ->"DecryptPayload"[label="true"];
-	"ProcessUnauthenticatedHeader" ->"ProcessDataPacket"[label="false"];
-	"DecryptPayload"->"visitor_->OnPacketHeader(header)";
-	"visitor_->OnPacketHeader(header)"->"ProcessFrameData";
+	"ProcessUnauthenticatedHeader" ->"ProcessDataPacket"[label="false", style=dashed];
+	"ProcessUnauthenticatedHeader"->"visitor_->OnUnauthenticatedHeader"[style=dashed];
+	"DecryptPayload"->"visitor_->OnPacketHeader";
+	"visitor_->OnPacketHeader"->"ProcessFrameData";
 	"ProcessFrameData"->"visitor_->OnPacketComplete()";
+	"visitor_->OnPacketComplete()->ProcessDataPacket"[label=true];
 }
 subgraph ProcessFrameData {
 	label="ProcessFrameData";
@@ -36,7 +32,7 @@ subgraph ChloFramerVisitorOnStreamFrame {
 
 subgraph crypto_framerProcessInput{
 	label="crypto_framer.ProcessInput(data)";
-	"crypto_framer.ProcessInput(data)"->"Process(input)";
+	"crypto_framer.ProcessInput(data)"->"Process(input)"[style=dashed];
 	"Process(input)"->"visitor_->OnHandshakeMessage";
 	"visitor_->OnHandshakeMessage"->"ChloFramerVisitor::OnHandshakeMessage";
 }
@@ -51,8 +47,8 @@ subgraph ChloExtractorDelegateOnChlo {
 }
 subgraph OnUnauthenticatedPublicHeader {
 	label="OnUnauthenticatedPublicHeader";
-	"QuicDispatcher::OnUnauthenticatedPublicHeader"->"essionMap::iterator it = session_map_.find(connection_id)";
-	"essionMap::iterator it = session_map_.find(connection_id)"->"it->second->ProcessUdpPacket";
+	"QuicDispatcher::OnUnauthenticatedPublicHeader"->"session_map_.find(connection_id)";
+	"session_map_.find(connection_id)"->"it->second->ProcessUdpPacket"[label="it->second"];
 	"it->second->ProcessUdpPacket"->"QuicConnection::ProcessUdpPacket";
 	"QuicConnection::ProcessUdpPacket"->"framer_.ProcessPacket(packet)";
 	"framer_.ProcessPacket(packet)"->"MaybeProcessUndecryptablePackets()";
@@ -62,8 +58,7 @@ subgraph OnUnauthenticatedPublicHeader {
 
 subgraph ProcessUnauthenticatedHeader {
 	label="ProcessUnauthenticatedHeader";
-	"ProcessUnauthenticatedHeader"->"visitor_->OnUnauthenticatedHeader(*header)";
-	"visitor_->OnUnauthenticatedHeader(*header)"->"QuicDispatcher::OnUnauthenticatedHeader";
+	"visitor_->OnUnauthenticatedHeader"->"QuicDispatcher::OnUnauthenticatedHeader"[label="visitor_=QuicDispatcher"];
 }
 subgraph DispatcherOnUnauthenticatedHeader{
 	label="QuicDispatcher::OnUnauthenticatedHeader";
@@ -80,34 +75,39 @@ subgraph MaybeRejectStatelessly {
 subgraph ProcessStatelessRejectorState {
 	label = "ProcessStatelessRejectorState";
 	"ProcessStatelessRejectorState"->"ProcessUnauthenticatedHeaderFate";
-
 }
 
 subgraph ProcessUnauthenticatedHeaderFate {
 	label = "ProcessUnauthenticatedHeaderFate";
-	"ProcessUnauthenticatedHeaderFate"->"ProcessChlo()";
+	"ProcessUnauthenticatedHeaderFate"->"ProcessChlo()"[style=dashed];
 }
 
 subgraph ProcessChlo {
 	label = "ProcessChlo";
 	"ProcessChlo()"->"CreateQuicSession"; 
-	"CreateQuicSession"->"session->ProcessUdpPacket";
+	"CreateQuicSession"->"session_map_.insert";
+	"session_map_.insert"->"session->ProcessUdpPacket";
+	"session->ProcessUdpPacket"->"QuicConnection::ProcessUdpPacket"[style=dashed];
+	"session->ProcessUdpPacket"->"DeliverPacketsToSession";
+	"DeliverPacketsToSession"[shape=record,style=dashed];
 }
-subgraph sessionProcessUdpPacket {
-	label = "session->ProcessUdpPacket";
-	"session->ProcessUdpPacket"->"QuicConnection::ProcessUdpPacket";
+
+subgraph QuicConnectionProcessUdpPacket {
+	label = "QuicConnectionProcessUdpPacket";
 	"QuicConnection::ProcessUdpPacket"->"framer_.ProcessPacket";
 	"framer.ProcessPacket"->"QuicFramer::ProcessPacket";
 	"framer.ProcessPacket"->"MaybeProcessUndecryptablePackets()";
 	"MaybeProcessUndecryptablePackets()"->"MaybeSendInResponseToPacket()";
 	"MaybeSendInResponseToPacket()"->"SetPingAlarm()";
+	"SetPingAlarm()"[shape=record, style=dashed];
 }
+
 subgraph CreateQuicSession {
 	label = "CreateQuicSession";
-	"CreateQuicSession"->"new QuicConnection";
+	"CreateQuicSession"->"new QuicConnection"[style=dashed];
 	"new QuicConnection"->"new QuicSimpleServerSession";
 	"new QuicSimpleServerSession"->"session->Initialize()";
-	"session->Initialize()"->"QuicServerSessionBase::Initialize()";
+	"session->Initialize()"->"QuicServerSessionBase::Initialize()"[style=dashed];
 }
 
 subgraph sessionInitialize {
@@ -119,7 +119,6 @@ subgraph "QuicSpdySessionInitialize" {
 	label = "QuicSpdySession::Initialize";
 	"QuicSpdySession::Initialize()"->"headers_stream_.reset(new QuicHeadersStream(this))";
 }
-
 
 subgraph ChloExtractorExtract {
 	"ChloExtractor::Extract"->"QuicFramer framer(versions, QuicTime::Zero(), Perspective::IS_SERVER)";
