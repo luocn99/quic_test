@@ -21,8 +21,58 @@ subgraph ProcessFrameData {
 	label="ProcessFrameData";
 	"ProcessFrameData"->"ProcessStreamFrame"[label="frame_type & kQuicFrameTypeStreamMask"];
 	"ProcessStreamFrame"->"visitor_->OnStreamFrame(frame)";
-	"visitor_->OnStreamFrame(frame)"->"ChloFramerVisitor::OnStreamFrame";
+	"visitor_->OnStreamFrame(frame)"->"ChloFramerVisitor::OnStreamFrame"[label="visitor_=ChloFramerVisitr", style=dashed];
+	"visitor_->OnStreamFrame(frame)"->"QuicConnection::OnStreamFrame"[label="visitor_=QuicConnection", style=dashed];
 }
+
+subgraph QuicConnectionOnStreamFrame {
+	"QuicConnection::OnStreamFrame"->"QuicSimpleServerSession::OnStreamFrame"[style=dashed];
+	"QuicSimpleServerSession::OnStreamFrame"->"QuicSpdySession::OnStreamFrame";
+}
+
+subgraph QuicSpdySessionOnStreamFrame {
+	"QuicSpdySession::OnStreamFrame"->"QuicSession::OnStreamFrame"[style=dashed];
+	"QuicSession::OnStreamFrame"->"GetOrCreateStream(stream_id)";
+	"GetOrCreateStream(stream_id)"->"stream->OnStreamFrame";
+}
+
+subgraph streamOnStreamFrame {
+	"stream->OnStreamFrame"->"QuicStream::OnStreamFrame"[style=dashed];
+	"QuicStream::OnStreamFrame"->"sequencer_.OnStreamFrame";
+}
+
+subgraph sequencerStreamFrame {
+	"sequencer_.OnStreamFrame"->"QuicStreamSequencer::OnStreamFrame"[style=dashed];
+	"QuicStreamSequencer::OnStreamFrame"->"stream_->OnDataAvailable()";
+	"stream_->OnDataAvailable()"->"QuicCryptoStream::OnDataAvailable()"[style=dashed];
+	"QuicCryptoStream::OnDataAvailable()"->"crypto_framer_.ProcessInput";
+	"crypto_framer_.ProcessInput"->"crypto_framer_.ProcessInput"[label="while true"];
+	"crypto_framer_.ProcessInput"->"CryptoFramer::ProcessInput";
+	"CryptoFramer::ProcessInput"->"Process";
+	"Process"->"visitor_->OnHandshakeMessage";
+	"visitor_->OnHandshakeMessage"->"QuicCryptoServerStream::OnHandshakeMessage"[label="visitor_=QuicCryptoServerStream",style=dashed];
+	"QuicCryptoServerStream::OnHandshakeMessage"->"CryptoUtils::HashHandshakeMessage";
+	"CryptoUtils::HashHandshakeMessage"->"crypto_config_->ValidateClientHello";
+}
+
+subgraph crypto_config_ValidateClientHello {
+	"crypto_config_->ValidateClientHello"->"QuicCryptoServerConfig::ValidateClientHello"[style=dashed];
+	"QuicCryptoServerConfig::ValidateClientHello"->"EvaluateClientHello";
+	"EvaluateClientHello"->"EvaluateClientHelloAfterGetProof";
+	"EvaluateClientHelloAfterGetProof"->"helper.ValidationComplete"[style=dashed];
+	"helper.ValidationComplete"->"(*done_cb_)->Run";
+	"(*done_cb_)->Run"->"QuicCryptoServerStream::ValidateCallback::Run"[style=dashed];
+	"QuicCryptoServerStream::ValidateCallback::Run"->"parent_->FinishProcessingHandshakeMessage";
+	"parent_->FinishProcessingHandshakeMessage"->"QuicCryptoServerStream::FinishProcessingHandshakeMessage"[style=dashed];
+	"QuicCryptoServerStream::FinishProcessingHandshakeMessage"->"ProcessClientHello";
+	"ProcessClientHello"->"crypto_config_->ProcessClientHello";
+	"crypto_config_->ProcessClientHello"->"QuicCryptoServerConfig::ProcessClientHello"[style=dashed];
+	"QuicCryptoServerConfig::ProcessClientHello"->"CryptoUtils::ValidateClientHello";
+	"CryptoUtils::ValidateClientHello"->"ProcessClientHelloAfterGetProof";
+	"ProcessClientHelloAfterGetProof"->"!requested_config.get()"[style=dashed];
+	"!requested_config.get()"->"BuildRejection"[label=true];
+}
+
 subgraph ChloFramerVisitorOnStreamFrame {
 	label="ChloFramerVisitor::OnStreamFrame";
 	"ChloFramerVisitor::OnStreamFrame"->"frame.stream_id == kCryptoStreamId";
@@ -32,19 +82,22 @@ subgraph ChloFramerVisitorOnStreamFrame {
 
 subgraph crypto_framerProcessInput{
 	label="crypto_framer.ProcessInput(data)";
-	"crypto_framer.ProcessInput(data)"->"Process(input)"[style=dashed];
-	"Process(input)"->"visitor_->OnHandshakeMessage";
+	"crypto_framer.ProcessInput(data)"->"Process"[style=dashed];
+	"Process"->"visitor_->OnHandshakeMessage";
 	"visitor_->OnHandshakeMessage"->"ChloFramerVisitor::OnHandshakeMessage";
 }
 subgraph ChloFramerVisitorOnHandshakeMessage {
 	label = "ChloFramerVisitor::OnHandshakeMessage";
-	"ChloFramerVisitor::OnHandshakeMessage"->"delegate_->OnChlo(framer_->version(), connection_id_, message)";
-	"delegate_->OnChlo(framer_->version(), connection_id_, message)"->"ChloExtractor::Delegate::OnChlo";
+	"ChloFramerVisitor::OnHandshakeMessage"->"delegate_->OnChlo";
+	"delegate_->OnChlo"->"ChloExtractor::Delegate::OnChlo";
 }
 subgraph ChloExtractorDelegateOnChlo {
 	label = "ChloExtractor::Delegate::OnChlo";
 	"ChloExtractor::Delegate::OnChlo"->"rejector_->OnChlo";
+	"rejector_->OnChlo"->"StatelessRejector::OnChlo";
+	"StatelessRejector::OnChlo"[shape=record, style=dashed];
 }
+
 subgraph OnUnauthenticatedPublicHeader {
 	label="OnUnauthenticatedPublicHeader";
 	"QuicDispatcher::OnUnauthenticatedPublicHeader"->"session_map_.find(connection_id)";
@@ -60,6 +113,7 @@ subgraph ProcessUnauthenticatedHeader {
 	label="ProcessUnauthenticatedHeader";
 	"visitor_->OnUnauthenticatedHeader"->"QuicDispatcher::OnUnauthenticatedHeader"[label="visitor_=QuicDispatcher"];
 }
+
 subgraph DispatcherOnUnauthenticatedHeader{
 	label="QuicDispatcher::OnUnauthenticatedHeader";
 	"QuicDispatcher::OnUnauthenticatedHeader"->"ValidityChecks(header)";
